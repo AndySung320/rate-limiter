@@ -1,0 +1,91 @@
+# ========================
+# Go build artifacts
+# ========================
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build output directories
+/bin/
+/build/
+/dist/
+/tmp/
+/coverage.out
+
+# ========================
+# Go modules
+# ========================
+vendor/
+*.modcache/
+go.work
+go.work.sum
+
+# ========================
+# Environment / Config files
+# ========================
+.env
+.env.local
+.env.*
+*.log
+*.pid
+*.bak
+*.swp
+
+# ========================
+# IDE / Editor / OS specific
+# ========================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VSCode
+.vscode/
+.history/
+
+# JetBrains / Goland
+.idea/
+*.iml
+
+# ========================
+# Docker / Container stuff
+# ========================
+docker-compose.override.yml
+*.tar
+*.img
+
+# ========================
+# Test / Dev artifacts
+# ========================
+*.json
+*.yaml
+*.yml
+*.cfg
+*.ini
+*.db
+*.sqlite
+*.sqlite3
+
+# if you want to keep real config folder, allow this:
+!config/*.yaml
+
+# ========================
+# Other generated files
+# ========================
+*.coverprofile
+*.prof
+*.pprof
+*.svg
+*.zip
+*.gz
+
+# ========================
+# OS specific metadata
+# ========================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
