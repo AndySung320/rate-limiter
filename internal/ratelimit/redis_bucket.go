@@ -1,7 +1,6 @@
 package ratelimit
 
 import (
-	"sync"
 	"time"
 
 	"github.com/AndySung320/rate-limiter/internal/storage"
@@ -12,7 +11,6 @@ type RedisBucket struct {
 	capacity   int64
 	refillRate int64
 	storage    *storage.RedisStorage
-	mutex      sync.Mutex
 	ttl        time.Duration
 }
 
@@ -26,56 +24,23 @@ func NewRedisBucket(key string, capacity, refillRate int64, storage *storage.Red
 	}
 }
 
-func (rb *RedisBucket) Allow(cost int) (bool, int64, error) {
-	rb.mutex.Lock()
-	defer rb.mutex.Unlock()
+// func (rb *RedisBucket) Allow(cost int) (bool, int64, error) {
+// 	requestID := fmt.Sprintf("%d", time.Now().UnixNano())
+// 	log.Printf("🔄 [%s] Request START - key: %s, cost: %d", requestID, rb.key, cost)
+// 	allowed, remaining, err := rb.storage.AtomicTokenBucket(rb.key, rb.capacity, rb.refillRate, cost, rb.ttl)
+// 	if err != nil {
 
-	// Get current state from Redis
-	state, err := rb.storage.GetBucketState(rb.key)
-	if err != nil {
-		return false, 0, err
-	}
+// 		return false, 0, err
+// 	}
 
-	now := time.Now()
+// 	log.Printf("💾 [%s] WRITE to Redis - tokens: %d, allowed: %v", requestID, remaining, allowed)
+// 	log.Printf("✅ Request COMPLETE - remaining: %d", remaining)
+// 	return allowed, remaining, nil
+// }
 
-	// Initialize bucket if it doesn't exist
-	if state == nil {
-		state = &storage.BucketState{
-			Tokens:     rb.capacity,
-			LastRefill: now,
-			Capacity:   rb.capacity,
-			RefillRate: rb.refillRate,
-		}
-	}
-
-	// Refill tokens based on time elapsed
-	if state.Tokens < state.Capacity {
-		delta := now.Sub(state.LastRefill).Seconds()
-		tokensToAdd := int64(delta * float64(state.RefillRate))
-
-		if tokensToAdd > 0 {
-			state.Tokens = min(state.Capacity, state.Tokens+tokensToAdd)
-			state.LastRefill = now
-		}
-	}
-
-	// Check if we have enough tokens
-	allowed := int64(cost) <= state.Tokens
-	if allowed {
-		state.Tokens -= int64(cost)
-	}
-
-	// Save state back to Redis
-	if err := rb.storage.SetBucketState(rb.key, state, rb.ttl); err != nil {
-		return false, 0, err
-	}
-
-	return allowed, state.Tokens, nil
-}
-
-func min(a, b int64) int64 {
-	if a < b {
-		return a
-	}
-	return b
-}
+// func min(a, b int64) int64 {
+// 	if a < b {
+// 		return a
+// 	}
+// 	return b
+// }
