@@ -1,0 +1,31 @@
+tiers:
+  free:
+    capacity: 100     
+    refill_rate: 10 # refill 10 token every second
+  premium:
+    capacity: 1000
+    refill_rate: 100 # refill 100 token every second
+ips:
+  capacity: 1000
+  refill_rate: 100
+endpoints:
+  /api/upload:
+    rule: tiers+endpoints 
+    cost: 10
+    global_capacity: 10000     
+    global_refill_rate: 2000   # refill 2000 token every second
+  /api/download:
+    rule: tiers+endpoints
+    cost: 10
+    global_capacity: 10000
+    global_refill_rate: 2000 # refill 2000 token evey second
+  /api/ping:
+    rule: IP+endpoints
+    cost: 1
+    global_capacity: 5000
+    global_refill_rate: 1000
+  /api/list:
+    rule: endpoint
+    cost: 10
+    global_capacity: 10000
+    global_refill_rate: 1000
