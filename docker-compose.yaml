@@ -1,0 +1,26 @@
+# docker-compose.yml
+version: '3.8'
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+  
+  rate-limiter-1:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - redis
+  
+  rate-limiter-2:
+    build: .
+    ports:
+      - "8081:8080"
+    environment:
+      - PORT=8080
+    depends_on:
+      - redis

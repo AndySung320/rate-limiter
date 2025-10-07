@@ -72,7 +72,7 @@ docker-compose.override.yml
 
 # if you want to keep real config folder, allow this:
 !config/*.yaml
-
+!docker-compose.yaml
 # ========================
 # Other generated files
 # ========================
