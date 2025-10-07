@@ -20,7 +20,13 @@ func main() {
 	}
 
 	// Try to initialize Redis storage
-	redisStorage := storage.NewRedisStorage("localhost:6379", "", 0)
+	// ✅ Redis address from environment (fallback to localhost)
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+	log.Printf("Connecting to Redis at %s", redisAddr)
+	redisStorage := storage.NewRedisStorage(redisAddr, "", 0)
 
 	// Test Redis connection
 	if err := redisStorage.Ping(); err != nil {
