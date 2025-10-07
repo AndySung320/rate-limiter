@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -37,40 +39,42 @@ func NewRedisStorage(addr, password string, db int) *RedisStorage {
 		scripts: make(map[string]*ScriptInfo),
 	}
 	// Load all scripts at startup
-	storage.LoadScript("endpoint_only", "internal/storage/tokenbucket.lua")
-	storage.LoadScript("tier_endpoint", "internal/storage/tokenbucket_dual.lua")
+	if err := storage.LoadScript("endpoint_only", "tokenbucket.lua"); err != nil {
+		log.Fatalf("❌ Failed to load script endpoint_only: %v", err)
+	}
+	if err := storage.LoadScript("tier_endpoint", "tokenbucket_dual.lua"); err != nil {
+		log.Fatalf("❌ Failed to load script tier_endpoint: %v", err)
+	}
 
+	for name, script := range storage.scripts {
+		log.Printf("✅ Script loaded: %s (SHA=%s, len=%d)", name, script.SHA, len(script.Content))
+	}
 	return storage
 }
 
-func (r *RedisStorage) LoadScript(name, path string) error {
-	content, err := loadLuaScript(path)
+func (r *RedisStorage) LoadScript(name, luaScriptName string) error {
+	_, file, _, _ := runtime.Caller(0)
+	baseDir := filepath.Dir(file) // internal/storage
+	scriptPath := filepath.Join(baseDir, luaScriptName)
+	log.Printf("DEBUG: LoadScript from %s", scriptPath)
+	content, err := os.ReadFile(scriptPath)
 	if err != nil {
-		log.Fatalf("Failed to load lua script: %v", err)
-		return err
+		return fmt.Errorf("failed to read lua script (%s): %w", scriptPath, err)
 	}
-	sha, err := r.client.ScriptLoad(r.ctx, content).Result()
+	sha, err := r.client.ScriptLoad(r.ctx, string(content)).Result()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load script into redis: %w", err)
 	}
 
 	r.scripts[name] = &ScriptInfo{
 		Name:     name,
 		SHA:      sha,
-		Content:  content,
+		Content:  string(content),
 		LoadedAt: time.Now(),
 	}
 
-	log.Printf("Loaded script '%s' with SHA: %s", name, sha)
+	log.Printf("Loaded script '%s' from %s (SHA: %s)", name, scriptPath, sha)
 	return nil
-}
-
-func loadLuaScript(path string) (string, error) {
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
 }
 
 func (r *RedisStorage) ExecuteScript(scriptName string, keys []string, args ...interface{}) (interface{}, error) {
@@ -107,37 +111,6 @@ func (r *RedisStorage) AtomicTokenBucket(key string, capacity, refillRate int64,
 	globalRemaining := values[1].(int64)
 	return allowed, globalRemaining, err
 }
-
-// func (r *RedisStorage) AtomicTokenBucket(key string, capacity, refillRate int64, cost int, ttl time.Duration) (bool, int64, error) {
-// 	now := time.Now().UnixMilli()
-// 	// Use cached script SHA (faster than sending full script)
-// 	result, err := r.client.EvalSha(r.ctx, r.scriptSHA, []string{r.bucketKey(key)},
-// 		capacity, refillRate, cost, now, int(ttl.Seconds())).Result()
-
-// 	if err != nil && strings.Contains(err.Error(), "NOSCRIPT") {
-// 		// Script not loaded, reload it
-// 		log.Println("Reloading Lua script after Redis restart...")
-// 		sha, err := r.client.ScriptLoad(r.ctx, r.originalScript).Result()
-// 		if err != nil {
-// 			return false, 0, err
-// 		}
-// 		r.scriptSHA = sha
-
-// 		// Retry with new SHA
-// 		result, err = r.client.EvalSha(r.ctx, r.scriptSHA, []string{r.bucketKey(key)},
-// 			capacity, refillRate, cost, now, int(ttl.Seconds())).Result()
-// 		if err != nil {
-// 			return false, 0, err
-// 		}
-// 		log.Printf("New script SHA after reload: %s", sha)
-// 	}
-
-// 	values := result.([]interface{})
-// 	allowed := values[0].(int64) == 1
-// 	remaining := values[1].(int64)
-
-// 	return allowed, remaining, nil
-// }
 
 func (r *RedisStorage) AtomicDualBucket(userKey, globalKey string, globalCap, globalRate, userCap, userRate int64, cost int64, ttl time.Duration) (bool, int64, int64, error) {
 	now := time.Now().UnixMilli()

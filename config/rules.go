@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -41,4 +42,48 @@ func LoadRuleSet(path string) (*RuleSet, error) {
 	}
 
 	return &ruleSet, nil
+}
+
+func ValidateRuleSet(rs *RuleSet) error {
+	// Validate tiers
+	for name, tier := range rs.Tiers {
+		if tier.Capacity <= 0 {
+			return fmt.Errorf("tier '%s': capacity must be positive", name)
+		}
+		if tier.RefillRate <= 0 {
+			return fmt.Errorf("tier '%s': refill_rate must be positive", name)
+		}
+	}
+
+	// Validate endpoints
+	validRules := map[string]bool{
+		"tiers+endpoints": true,
+		"IP+endpoints":    true,
+		"endpoint":        true,
+	}
+
+	for path, endpoint := range rs.Endpoints {
+		if !validRules[endpoint.Rule] {
+			return fmt.Errorf("endpoint '%s': unknown rule '%s'", path, endpoint.Rule)
+		}
+		if endpoint.Cost <= 0 {
+			return fmt.Errorf("endpoint '%s': cost must be positive", path)
+		}
+		if endpoint.GlobalCapacity <= 0 {
+			return fmt.Errorf("endpoint '%s': global_capacity must be positive", path)
+		}
+		if endpoint.GlobalRefillRate <= 0 {
+			return fmt.Errorf("endpoint '%s': global_refill_rate must be positive", path)
+		}
+	}
+
+	// Validate IPs
+	if rs.IPs.Capacity <= 0 {
+		return fmt.Errorf("ip config: capacity must be positive")
+	}
+	if rs.IPs.RefillRate <= 0 {
+		return fmt.Errorf("ip config: refill_rate must be positive")
+	}
+
+	return nil
 }

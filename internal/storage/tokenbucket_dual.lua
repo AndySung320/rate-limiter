@@ -9,13 +9,13 @@ local cost = tonumber(ARGV[5])
 local now = tonumber(ARGV[6])
 local ttl = tonumber(ARGV[7])
 
--- 初始化狀態
+-- Initialize default state
 local user_tokens = user_capacity
 local user_last_refill = now
 local global_tokens = global_capacity
 local global_last_refill = now
 
--- 讀取使用者狀態
+-- Read user bucket state from Redis
 local user_state = redis.call('GET', user_key)
 if user_state then
     local decoded = cjson.decode(user_state)
@@ -23,7 +23,7 @@ if user_state then
     user_last_refill = decoded.user_last_refill
 end
 
--- 讀取全域狀態
+-- Read global bucket state from Redis
 local global_state = redis.call('GET', global_key)
 if global_state then
     local decoded = cjson.decode(global_state)
@@ -31,7 +31,7 @@ if global_state then
     global_last_refill = decoded.global_last_refill
 end
 
--- 補充使用者 token
+-- Refill user tokens based on elapsed time
 if user_tokens < user_capacity then
     local delta = (now - user_last_refill) / 1000
     local tokens_to_add = delta * user_refill_rate
@@ -41,7 +41,7 @@ if user_tokens < user_capacity then
     end
 end
 
--- 補充全域 token
+-- Refill global tokens based on elapsed timeif global_tokens < global_capacity then
 if global_tokens < global_capacity then
     local delta = (now - global_last_refill) / 1000
     local tokens_to_add = delta * global_refill_rate
@@ -51,7 +51,7 @@ if global_tokens < global_capacity then
     end
 end
 
--- 同時檢查使用者 & 全域是否允許
+-- Check both user and global buckets for availability
 local allowed = false
 if cost <= user_tokens and cost <= global_tokens then
     user_tokens = user_tokens - cost
@@ -59,7 +59,7 @@ if cost <= user_tokens and cost <= global_tokens then
     allowed = true
 end
 
--- 寫回使用者狀態
+-- Save updated user state
 local user_new_state = cjson.encode({
     user_tokens = user_tokens,
     user_last_refill = user_last_refill,
@@ -67,7 +67,7 @@ local user_new_state = cjson.encode({
     user_refill_rate = user_refill_rate
 })
 
--- 寫回全域狀態
+-- Save updated global state
 local global_new_state = cjson.encode({
     global_tokens = global_tokens,
     global_last_refill = global_last_refill,
@@ -78,5 +78,5 @@ local global_new_state = cjson.encode({
 redis.call('SET', user_key, user_new_state, 'EX', ttl)
 redis.call('SET', global_key, global_new_state, 'EX', ttl)
 
--- 回傳: 是否允許(1/0), user剩餘token, global剩餘token
+-- Return: [allowed (1/0), remaining user tokens, remaining global tokens]
 return {allowed and 1 or 0, math.floor(user_tokens), math.floor(global_tokens)}

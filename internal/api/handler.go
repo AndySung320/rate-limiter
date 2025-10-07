@@ -150,20 +150,3 @@ func getValidTiers(tiers map[string]config.TierConfig) []string {
 	}
 	return validTiers
 }
-
-// func CheckHandler(bucket *limiter.TokenBucket) gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		var req CheckRequest
-// 		if err := c.ShouldBindJSON(&req); err != nil {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 			return
-// 		}
-
-// 		allowed, remaining := bucket.Allow(req.Cost)
-// 		resp := CheckResponse{
-// 			Allowed:   allowed,
-// 			Remaining: remaining,
-// 		}
-// 		c.JSON(http.StatusOK, resp)
-// 	}
-// }
