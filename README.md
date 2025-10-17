@@ -32,6 +32,7 @@ A high-performance distributed rate limiting service built with Go, Redis, and L
 - Single machine deployment
 
 ## 🏗️ Architecture
+```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   Client    │────▶│  Instance 1 │────▶│             │
 │             │     │  (Port 8080)│     │             │
@@ -51,6 +52,7 @@ A high-performance distributed rate limiting service built with Go, Redis, and L
 │ • Dual Bucket       │
 │ • Token Refill      │
 └─────────────────────┘
+```
 **Key Components:**
 1. **API Handler**: Validates requests and routes to appropriate rate limiting strategy
 2. **Storage Layer**: Manages Redis connections and Lua script execution
@@ -60,7 +62,7 @@ A high-performance distributed rate limiting service built with Go, Redis, and L
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Go 1.21+
+- Go 1.24+
 - Redis 7+
 - Docker & Docker Compose (optional)
 
