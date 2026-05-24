@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/AndySung320/rate-limiter/config"
 	"github.com/AndySung320/rate-limiter/internal/api"
@@ -14,10 +17,19 @@ import (
 func main() {
 	cwd, _ := os.Getwd()
 	log.Println("Running from:", cwd)
-	rulSet, err := config.LoadRuleSet("config/rules.yaml")
+
+	rulePath := os.Getenv("RULES_PATH")
+	if rulePath == "" {
+		rulePath = "config/rules.yaml"
+	}
+	ruleStore, err := config.NewRuleStore(rulePath)
 	if err != nil {
 		log.Fatalf("Failed to load rate limit rules: %v", err)
 	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go ruleStore.Watch(ctx)
 
 	// Try to initialize Redis storage
 	// ✅ Redis address from environment (fallback to localhost)
@@ -38,7 +50,7 @@ func main() {
 	log.Println("✅ Connected to Redis")
 
 	// Initialize handler
-	handler := api.NewRateLimiterHandler(redisStorage, rulSet)
+	handler := api.NewRateLimiterHandler(redisStorage, ruleStore)
 
 	r := gin.Default()
 

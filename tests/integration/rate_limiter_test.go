@@ -79,7 +79,7 @@ func TestRateLimiter_EndToEnd(t *testing.T) {
 		},
 	}
 
-	handler := api.NewRateLimiterHandler(redisStorage, rules)
+	handler := api.NewRateLimiterHandler(redisStorage, config.NewRuleStoreFromRules(rules))
 
 	// Setup Gin
 	gin.SetMode(gin.TestMode)
@@ -148,7 +148,7 @@ func TestRateLimiter_TokenRefill(t *testing.T) {
 		IPs: config.IPConfig{Capacity: 500, RefillRate: 50},
 	}
 
-	handler := api.NewRateLimiterHandler(redisStorage, rules)
+	handler := api.NewRateLimiterHandler(redisStorage, config.NewRuleStoreFromRules(rules))
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -211,7 +211,7 @@ func TestRateLimiter_ConcurrentRequests(t *testing.T) {
 		IPs: config.IPConfig{Capacity: 500, RefillRate: 50},
 	}
 
-	handler := api.NewRateLimiterHandler(redisStorage, rules)
+	handler := api.NewRateLimiterHandler(redisStorage, config.NewRuleStoreFromRules(rules))
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -284,8 +284,8 @@ func TestRateLimiter_MultipleInstances(t *testing.T) {
 		IPs: config.IPConfig{Capacity: 500, RefillRate: 50},
 	}
 
-	handler1 := api.NewRateLimiterHandler(storage1, rules)
-	handler2 := api.NewRateLimiterHandler(storage2, rules)
+	handler1 := api.NewRateLimiterHandler(storage1, config.NewRuleStoreFromRules(rules))
+	handler2 := api.NewRateLimiterHandler(storage2, config.NewRuleStoreFromRules(rules))
 
 	gin.SetMode(gin.TestMode)
 	router1 := gin.New()

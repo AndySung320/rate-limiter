@@ -28,10 +28,10 @@ type CheckResponse struct {
 
 type RateLimiterHandler struct {
 	storage storage.Storage
-	rules   *config.RuleSet
+	rules   *config.RuleStore
 }
 
-func NewRateLimiterHandler(storage storage.Storage, rules *config.RuleSet) *RateLimiterHandler {
+func NewRateLimiterHandler(storage storage.Storage, rules *config.RuleStore) *RateLimiterHandler {
 	return &RateLimiterHandler{
 		storage: storage,
 		rules:   rules,
@@ -45,7 +45,8 @@ func (h *RateLimiterHandler) CheckHandler(c *gin.Context) {
 		return
 	}
 
-	ep, ok := h.rules.Endpoints[req.Endpoint]
+	rules := h.rules.Get()
+	ep, ok := rules.Endpoints[req.Endpoint]
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unknown endpoint"})
 		return
@@ -58,20 +59,20 @@ func (h *RateLimiterHandler) CheckHandler(c *gin.Context) {
 	rule := ep.Rule
 	globalKey := fmt.Sprintf("global:%s", req.Endpoint)
 	cost := ep.Cost
-	globalCapacity := h.rules.Endpoints[req.Endpoint].GlobalCapacity
-	globalRefillrate := h.rules.Endpoints[req.Endpoint].GlobalRefillRate
+	globalCapacity := rules.Endpoints[req.Endpoint].GlobalCapacity
+	globalRefillrate := rules.Endpoints[req.Endpoint].GlobalRefillRate
 	var allowed bool
 	var userRemaining, globalRemaining int64
 	var err error
 	switch rule {
 	case "tiers+endpoints":
 		// Validate user tier exists
-		tier, hasTier := h.rules.Tiers[req.UserTier]
+		tier, hasTier := rules.Tiers[req.UserTier]
 		if !hasTier {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":       "invalid user_tier",
 				"provided":    req.UserTier,
-				"valid_tiers": getValidTiers(h.rules.Tiers), // Helper function
+				"valid_tiers": getValidTiers(rules.Tiers), // Helper function
 			})
 			return
 		}
@@ -92,8 +93,8 @@ func (h *RateLimiterHandler) CheckHandler(c *gin.Context) {
 		}
 
 		ipKey := fmt.Sprintf("ip:%s:%s", req.IPAddress, req.Endpoint)
-		ipCapacity := h.rules.IPs.Capacity
-		ipRefillrate := h.rules.IPs.RefillRate
+		ipCapacity := rules.IPs.Capacity
+		ipRefillrate := rules.IPs.RefillRate
 		// Reuse your AtomicDualBucket with IP instead of user
 		var ipRemaining int64
 		allowed, ipRemaining, globalRemaining, err = h.storage.AtomicDualBucket(

@@ -80,7 +80,7 @@ func TestTierValidation(t *testing.T) {
 		mock.Anything, mock.Anything,
 	).Return(true, int64(90), int64(9990), nil)
 
-	handler := NewRateLimiterHandler(mockStorage, mockRules)
+	handler := NewRateLimiterHandler(mockStorage, config.NewRuleStoreFromRules(mockRules))
 
 	tests := []struct {
 		name           string
@@ -217,7 +217,7 @@ func TestInvalidTierErrorMessage(t *testing.T) {
 	}
 
 	mockStorage := &storage.RedisStorage{}
-	handler := NewRateLimiterHandler(mockStorage, mockRules)
+	handler := NewRateLimiterHandler(mockStorage, config.NewRuleStoreFromRules(mockRules))
 
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -306,7 +306,7 @@ func TestCheckHandler_StatusCodes(t *testing.T) {
 			mockStorage.On("Ping").Return(nil)
 			mockStorage.On("Close").Return(nil)
 
-			handler := NewRateLimiterHandler(mockStorage, mockRules)
+			handler := NewRateLimiterHandler(mockStorage, config.NewRuleStoreFromRules(mockRules))
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
